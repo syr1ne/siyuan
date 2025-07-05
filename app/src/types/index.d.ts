@@ -63,6 +63,7 @@ type TOperation =
     | "setAttrViewViewDesc"
     | "setAttrViewColDesc"
     | "setAttrViewBlockView"
+    | "setAttrViewGroup"
 type TBazaarType = "templates" | "icons" | "widgets" | "themes" | "plugins"
 type TCardType = "doc" | "notebook" | "all"
 type TEventBus = "ws-main" | "sync-start" | "sync-end" | "sync-fail" |
@@ -839,18 +840,20 @@ interface IAVView {
     pageSize: number;
     showIcon: boolean;
     wrapField: boolean;
+    filters: IAVFilter[],
+    sorts: IAVSort[],
+    groups: IAVView[]
+    group: IAVGroup
 }
 
 interface IAVTable extends IAVView {
     columns: IAVColumn[],
-    filters: IAVFilter[],
-    sorts: IAVSort[],
     rows: IAVRow[],
     rowCount: number,
 }
 
 interface IAVGallery extends IAVView {
-    coverFrom: number;    // 0：无，1：内容图，2：资源字段
+    coverFrom: number;    // 0：无，1：内容图，2：资源字段，3：内容块
     coverFromAssetKeyID?: string;
     cardSize: number;   // 0：小卡片，1：中卡片，2：大卡片
     cardAspectRatio: number;
@@ -858,8 +861,6 @@ interface IAVGallery extends IAVView {
     cards: IAVGalleryItem[],
     desc: string
     fields: IAVColumn[]
-    filters: IAVFilter[],
-    sorts: IAVSort[],
     cardCount: number,
 }
 
@@ -875,6 +876,12 @@ interface relativeDate {
     count: number;   // 数量
     unit: number;    // 单位：0: 天、1: 周、2: 月、3: 年
     direction: number;   // 方向：-1: 前、0: 现在、1: 后
+}
+
+interface IAVGroup {
+    field: string,
+    method?: number
+    order?: number
 }
 
 interface IAVSort {

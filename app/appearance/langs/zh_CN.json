@@ -1,4 +1,9 @@
 {
+  "groupMethod": "分组方式",
+  "hideEmptyGroup": "隐藏空白分组",
+  "groups": "组群",
+  "removeGroup": "移除分组",
+  "contentBlock": "内容块",
   "insertItemBefore": "在前方插入${x}条",
   "insertItemAfter": "在后方插入${x}条",
   "allViews": "所有视图",
@@ -16,7 +21,7 @@
   "showIcon": "显示图标",
   "showAllFieldsIcon": "显示字段图标",
   "wrapAllFields": "字段自动换行",
-  "gallery": "画廊",
+  "gallery": "卡片",
   "newTag": "新建标签",
   "pleaseWait": "请稍等片刻...",
   "reconnectPrompt": "切换应用后再次进入需要一些时间恢复思源内核运行，请稍等几秒或者点击“重试”按钮",
@@ -1352,7 +1357,7 @@
   },
   "_attrView": {
     "table": "表格",
-    "gallery": "画廊",
+    "gallery": "卡片",
     "key": "主键",
     "select": "单选"
   },

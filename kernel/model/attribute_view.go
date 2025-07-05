@@ -45,9 +45,19 @@ import (
 )
 
 func (tx *Transaction) doSetAttrViewGroup(operation *Operation) (ret *TxErr) {
-	err := SetAttributeViewGroup(operation.AvID, operation.BlockID, operation.Data.(*av.ViewGroup))
-	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+	data, err := gulu.JSON.MarshalJSON(operation.Data)
+	if nil != err {
+		logging.LogErrorf("marshal operation data failed: %s", err)
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
+	}
+	group := &av.ViewGroup{}
+	if err = gulu.JSON.UnmarshalJSON(data, &group); nil != err {
+		logging.LogErrorf("unmarshal operation data failed: %s", err)
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
+	}
+
+	if err = SetAttributeViewGroup(operation.AvID, operation.BlockID, group); nil != err {
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
@@ -100,7 +110,7 @@ func SetAttributeViewGroup(avID, blockID string, group *av.ViewGroup) error {
 func (tx *Transaction) doSetAttrViewCardAspectRatio(operation *Operation) (ret *TxErr) {
 	err := setAttrViewCardAspectRatio(operation)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
@@ -130,7 +140,7 @@ func setAttrViewCardAspectRatio(operation *Operation) (err error) {
 func (tx *Transaction) doSetAttrViewBlockView(operation *Operation) (ret *TxErr) {
 	err := SetDatabaseBlockView(operation.BlockID, operation.AvID, operation.ID)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
@@ -138,7 +148,7 @@ func (tx *Transaction) doSetAttrViewBlockView(operation *Operation) (ret *TxErr)
 func (tx *Transaction) doChangeAttrViewLayout(operation *Operation) (ret *TxErr) {
 	err := ChangeAttrViewLayout(operation.BlockID, operation.AvID, operation.Layout)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
@@ -226,7 +236,7 @@ func ChangeAttrViewLayout(blockID, avID string, layout av.LayoutType) (err error
 func (tx *Transaction) doSetAttrViewWrapField(operation *Operation) (ret *TxErr) {
 	err := setAttrViewWrapField(operation)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
@@ -263,7 +273,7 @@ func setAttrViewWrapField(operation *Operation) (err error) {
 func (tx *Transaction) doSetAttrViewShowIcon(operation *Operation) (ret *TxErr) {
 	err := setAttrViewShowIcon(operation)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
@@ -293,7 +303,7 @@ func setAttrViewShowIcon(operation *Operation) (err error) {
 func (tx *Transaction) doSetAttrViewFitImage(operation *Operation) (ret *TxErr) {
 	err := setAttrViewFitImage(operation)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
@@ -323,7 +333,7 @@ func setAttrViewFitImage(operation *Operation) (err error) {
 func (tx *Transaction) doSetAttrViewCardSize(operation *Operation) (ret *TxErr) {
 	err := setAttrViewCardSize(operation)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
@@ -353,7 +363,7 @@ func setAttrViewCardSize(operation *Operation) (err error) {
 func (tx *Transaction) doSetAttrViewCoverFromAssetKeyID(operation *Operation) (ret *TxErr) {
 	err := setAttrViewCoverFromAssetKeyID(operation)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
@@ -383,7 +393,7 @@ func setAttrViewCoverFromAssetKeyID(operation *Operation) (err error) {
 func (tx *Transaction) doSetAttrViewCoverFrom(operation *Operation) (ret *TxErr) {
 	err := setAttrViewCoverFrom(operation)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
@@ -1306,9 +1316,74 @@ func renderViewableInstance(viewable av.Viewable, view *av.View, attrView *av.At
 		return
 	}
 
-	viewable.Filter(attrView)
-	viewable.Sort(attrView)
-	viewable.Calc()
+	av.Filter(viewable, attrView)
+	av.Sort(viewable, attrView)
+	av.Calc(viewable)
+
+	if groupCalc := viewable.GetGroupCalc(); nil != groupCalc {
+		if groupCalcKey, _ := attrView.GetKey(groupCalc.Field); nil != groupCalcKey {
+			collection := viewable.(av.Collection)
+			var calcResult *av.GroupCalc
+			field := collection.GetField(groupCalcKey.ID)
+			if nil != field {
+				if calc := field.GetCalc(); nil != calc && field.GetID() == groupCalcKey.ID {
+					// 直接使用字段计算结果
+					calcResult = &av.GroupCalc{Field: groupCalcKey.ID, FieldCalc: calc}
+				}
+
+				if nil == calcResult {
+					for i, f := range collection.GetFields() {
+						if f.GetID() != groupCalcKey.ID {
+							continue
+						}
+
+						field.SetCalc(groupCalc.FieldCalc)
+
+						switch field.GetType() {
+						case av.KeyTypeBlock:
+							av.CalcFieldBlock(collection, field, i)
+						case av.KeyTypeText:
+							av.CalcFieldText(collection, field, i)
+						case av.KeyTypeNumber:
+							av.CalcFieldNumber(collection, field, i)
+						case av.KeyTypeDate:
+							av.CalcFieldDate(collection, field, i)
+						case av.KeyTypeSelect:
+							av.CalcFieldSelect(collection, field, i)
+						case av.KeyTypeMSelect:
+							av.CalcFieldMSelect(collection, field, i)
+						case av.KeyTypeURL:
+							av.CalcFieldURL(collection, field, i)
+						case av.KeyTypeEmail:
+							av.CalcFieldEmail(collection, field, i)
+						case av.KeyTypePhone:
+							av.CalcFieldPhone(collection, field, i)
+						case av.KeyTypeMAsset:
+							av.CalcFieldMAsset(collection, field, i)
+						case av.KeyTypeTemplate:
+							av.CalcFieldTemplate(collection, field, i)
+						case av.KeyTypeCreated:
+							av.CalcFieldCreated(collection, field, i)
+						case av.KeyTypeUpdated:
+							av.CalcFieldUpdated(collection, field, i)
+						case av.KeyTypeCheckbox:
+							av.CalcFieldCheckbox(collection, field, i)
+						case av.KeyTypeRelation:
+							av.CalcFieldRelation(collection, field, i)
+						case av.KeyTypeRollup:
+							av.CalcFieldRollup(collection, field, i)
+						}
+						break
+					}
+
+					calcResult = &av.GroupCalc{Field: groupCalcKey.ID, FieldCalc: field.GetCalc()}
+					field.SetCalc(nil)
+				}
+			}
+
+			viewable.SetGroupCalc(calcResult)
+		}
+	}
 
 	// 分页
 	switch viewable.GetType() {
@@ -1358,8 +1433,8 @@ func GetCurrentAttributeViewImages(avID, viewID, query string) (ret []string, er
 	}
 
 	table := getAttrViewTable(attrView, view, query)
-	table.Filter(attrView)
-	table.Sort(attrView)
+	av.Filter(table, attrView)
+	av.Sort(table, attrView)
 
 	for _, row := range table.Rows {
 		for _, cell := range row.Cells {
@@ -1378,7 +1453,7 @@ func GetCurrentAttributeViewImages(avID, viewID, query string) (ret []string, er
 func (tx *Transaction) doUnbindAttrViewBlock(operation *Operation) (ret *TxErr) {
 	err := unbindAttributeViewBlock(operation, tx)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID}
 	}
 	return
 }
@@ -1453,7 +1528,7 @@ func unbindAttributeViewBlock(operation *Operation, tx *Transaction) (err error)
 func (tx *Transaction) doSetAttrViewColDate(operation *Operation) (ret *TxErr) {
 	err := setAttributeViewColDate(operation)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
@@ -1483,7 +1558,7 @@ func setAttributeViewColDate(operation *Operation) (err error) {
 func (tx *Transaction) doHideAttrViewName(operation *Operation) (ret *TxErr) {
 	err := hideAttrViewName(operation)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
@@ -1509,7 +1584,7 @@ func hideAttrViewName(operation *Operation) (err error) {
 func (tx *Transaction) doUpdateAttrViewColRollup(operation *Operation) (ret *TxErr) {
 	err := updateAttributeViewColRollup(operation)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
@@ -1558,7 +1633,7 @@ func updateAttributeViewColRollup(operation *Operation) (err error) {
 func (tx *Transaction) doUpdateAttrViewColRelation(operation *Operation) (ret *TxErr) {
 	err := updateAttributeViewColRelation(operation)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
@@ -1731,13 +1806,13 @@ func (tx *Transaction) doSortAttrViewView(operation *Operation) (ret *TxErr) {
 	attrView, err := av.ParseAttributeView(avID)
 	if err != nil {
 		logging.LogErrorf("parse attribute view [%s] failed: %s", operation.AvID, err)
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 
 	view := attrView.GetView(operation.ID)
 	if nil == view {
 		logging.LogErrorf("get view failed: %s", operation.BlockID)
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	viewID := view.ID
 	previousViewID := operation.PreviousID
@@ -1865,19 +1940,19 @@ func (tx *Transaction) doDuplicateAttrViewView(operation *Operation) (ret *TxErr
 	attrView, err := av.ParseAttributeView(avID)
 	if err != nil {
 		logging.LogErrorf("parse attribute view [%s] failed: %s", avID, err)
-		return &TxErr{code: TxErrWriteAttributeView, id: avID}
+		return &TxErr{code: TxErrHandleAttributeView, id: avID}
 	}
 
 	masterView := attrView.GetView(operation.PreviousID)
 	if nil == masterView {
 		logging.LogErrorf("get master view failed: %s", avID)
-		return &TxErr{code: TxErrWriteAttributeView, id: avID}
+		return &TxErr{code: TxErrHandleAttributeView, id: avID}
 	}
 
 	node, tree, _ := getNodeByBlockID(nil, operation.BlockID)
 	if nil == node {
 		logging.LogErrorf("get node by block ID [%s] failed", operation.BlockID)
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID}
 	}
 
 	attrs := parse.IAL2Map(node.KramdownIAL)
@@ -1927,7 +2002,7 @@ func (tx *Transaction) doDuplicateAttrViewView(operation *Operation) (ret *TxErr
 	if nil != masterView.Group {
 		if copyErr := copier.Copy(view.Group, masterView.Group); nil != copyErr {
 			logging.LogErrorf("copy group failed: %s", copyErr)
-			return &TxErr{code: TxErrWriteAttributeView, id: avID, msg: copyErr.Error()}
+			return &TxErr{code: TxErrHandleAttributeView, id: avID, msg: copyErr.Error()}
 		}
 	}
 
@@ -1975,7 +2050,7 @@ func (tx *Transaction) doDuplicateAttrViewView(operation *Operation) (ret *TxErr
 
 	if err = av.SaveAttributeView(attrView); err != nil {
 		logging.LogErrorf("save attribute view [%s] failed: %s", avID, err)
-		return &TxErr{code: TxErrWriteAttributeView, msg: err.Error(), id: avID}
+		return &TxErr{code: TxErrHandleAttributeView, msg: err.Error(), id: avID}
 	}
 	return
 }
@@ -1983,7 +2058,7 @@ func (tx *Transaction) doDuplicateAttrViewView(operation *Operation) (ret *TxErr
 func (tx *Transaction) doAddAttrViewView(operation *Operation) (ret *TxErr) {
 	err := addAttrViewView(operation.AvID, operation.ID, operation.BlockID, operation.Layout)
 	if nil != err {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
@@ -2075,20 +2150,20 @@ func (tx *Transaction) doSetAttrViewViewName(operation *Operation) (ret *TxErr) 
 	attrView, err := av.ParseAttributeView(avID)
 	if err != nil {
 		logging.LogErrorf("parse attribute view [%s] failed: %s", avID, err)
-		return &TxErr{code: TxErrWriteAttributeView, id: avID}
+		return &TxErr{code: TxErrHandleAttributeView, id: avID}
 	}
 
 	viewID := operation.ID
 	view := attrView.GetView(viewID)
 	if nil == view {
 		logging.LogErrorf("get view [%s] failed: %s", viewID, err)
-		return &TxErr{code: TxErrWriteAttributeView, id: viewID}
+		return &TxErr{code: TxErrHandleAttributeView, id: viewID}
 	}
 
 	view.Name = strings.TrimSpace(operation.Data.(string))
 	if err = av.SaveAttributeView(attrView); err != nil {
 		logging.LogErrorf("save attribute view [%s] failed: %s", avID, err)
-		return &TxErr{code: TxErrWriteAttributeView, msg: err.Error(), id: avID}
+		return &TxErr{code: TxErrHandleAttributeView, msg: err.Error(), id: avID}
 	}
 	return
 }
@@ -2099,20 +2174,20 @@ func (tx *Transaction) doSetAttrViewViewIcon(operation *Operation) (ret *TxErr) 
 	attrView, err := av.ParseAttributeView(avID)
 	if err != nil {
 		logging.LogErrorf("parse attribute view [%s] failed: %s", avID, err)
-		return &TxErr{code: TxErrWriteAttributeView, id: avID}
+		return &TxErr{code: TxErrHandleAttributeView, id: avID}
 	}
 
 	viewID := operation.ID
 	view := attrView.GetView(viewID)
 	if nil == view {
 		logging.LogErrorf("get view [%s] failed: %s", viewID, err)
-		return &TxErr{code: TxErrWriteAttributeView, id: viewID}
+		return &TxErr{code: TxErrHandleAttributeView, id: viewID}
 	}
 
 	view.Icon = operation.Data.(string)
 	if err = av.SaveAttributeView(attrView); err != nil {
 		logging.LogErrorf("save attribute view [%s] failed: %s", avID, err)
-		return &TxErr{code: TxErrWriteAttributeView, msg: err.Error(), id: avID}
+		return &TxErr{code: TxErrHandleAttributeView, msg: err.Error(), id: avID}
 	}
 	return
 }
@@ -2123,20 +2198,20 @@ func (tx *Transaction) doSetAttrViewViewDesc(operation *Operation) (ret *TxErr) 
 	attrView, err := av.ParseAttributeView(avID)
 	if err != nil {
 		logging.LogErrorf("parse attribute view [%s] failed: %s", avID, err)
-		return &TxErr{code: TxErrWriteAttributeView, id: avID}
+		return &TxErr{code: TxErrHandleAttributeView, id: avID}
 	}
 
 	viewID := operation.ID
 	view := attrView.GetView(viewID)
 	if nil == view {
 		logging.LogErrorf("get view [%s] failed: %s", viewID, err)
-		return &TxErr{code: TxErrWriteAttributeView, id: viewID}
+		return &TxErr{code: TxErrHandleAttributeView, id: viewID}
 	}
 
 	view.Desc = strings.TrimSpace(operation.Data.(string))
 	if err = av.SaveAttributeView(attrView); err != nil {
 		logging.LogErrorf("save attribute view [%s] failed: %s", avID, err)
-		return &TxErr{code: TxErrWriteAttributeView, msg: err.Error(), id: avID}
+		return &TxErr{code: TxErrHandleAttributeView, msg: err.Error(), id: avID}
 	}
 	return
 }
@@ -2144,7 +2219,7 @@ func (tx *Transaction) doSetAttrViewViewDesc(operation *Operation) (ret *TxErr) 
 func (tx *Transaction) doSetAttrViewName(operation *Operation) (ret *TxErr) {
 	err := tx.setAttributeViewName(operation)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
@@ -2233,7 +2308,7 @@ func (tx *Transaction) getAttrViewBoundNodes(attrView *av.AttributeView) (trees 
 func (tx *Transaction) doSetAttrViewFilters(operation *Operation) (ret *TxErr) {
 	err := setAttributeViewFilters(operation)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
@@ -2266,7 +2341,7 @@ func setAttributeViewFilters(operation *Operation) (err error) {
 func (tx *Transaction) doSetAttrViewSorts(operation *Operation) (ret *TxErr) {
 	err := setAttributeViewSorts(operation)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
@@ -2299,7 +2374,7 @@ func setAttributeViewSorts(operation *Operation) (err error) {
 func (tx *Transaction) doSetAttrViewPageSize(operation *Operation) (ret *TxErr) {
 	err := setAttributeViewPageSize(operation)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
@@ -2324,7 +2399,7 @@ func setAttributeViewPageSize(operation *Operation) (err error) {
 func (tx *Transaction) doSetAttrViewColCalc(operation *Operation) (ret *TxErr) {
 	err := setAttributeViewColumnCalc(operation)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
@@ -2346,7 +2421,7 @@ func setAttributeViewColumnCalc(operation *Operation) (err error) {
 		return
 	}
 
-	calc := &av.ColumnCalc{}
+	calc := &av.FieldCalc{}
 	switch view.LayoutType {
 	case av.LayoutTypeTable:
 		if err = gulu.JSON.UnmarshalJSON(data, calc); err != nil {
@@ -2370,7 +2445,7 @@ func setAttributeViewColumnCalc(operation *Operation) (err error) {
 func (tx *Transaction) doInsertAttrViewBlock(operation *Operation) (ret *TxErr) {
 	err := AddAttributeViewBlock(tx, operation.Srcs, operation.AvID, operation.BlockID, operation.PreviousID, operation.IgnoreFillFilterVal)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
@@ -2470,8 +2545,8 @@ func addAttributeViewBlock(now int64, avID, blockID, previousBlockID, addingBloc
 
 	if nil != view && 0 < len(view.Filters) && !ignoreFillFilter {
 		viewable := sql.RenderView(view, attrView, "")
-		viewable.Filter(attrView)
-		viewable.Sort(attrView)
+		av.Filter(viewable, attrView)
+		av.Sort(viewable, attrView)
 
 		collection := viewable.(av.Collection)
 		items := collection.GetItems()
@@ -2584,7 +2659,7 @@ func addAttributeViewBlock(now int64, avID, blockID, previousBlockID, addingBloc
 func (tx *Transaction) doRemoveAttrViewBlock(operation *Operation) (ret *TxErr) {
 	err := removeAttributeViewBlock(operation.SrcIDs, operation.AvID, tx)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID}
 	}
 	return
 }
@@ -2717,7 +2792,7 @@ func removeNodeAvID(node *ast.Node, avID string, tx *Transaction, tree *parse.Tr
 func (tx *Transaction) doDuplicateAttrViewKey(operation *Operation) (ret *TxErr) {
 	err := duplicateAttributeViewKey(operation)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
@@ -2792,7 +2867,7 @@ func duplicateAttributeViewKey(operation *Operation) (err error) {
 func (tx *Transaction) doSetAttrViewColumnWidth(operation *Operation) (ret *TxErr) {
 	err := setAttributeViewColWidth(operation)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
@@ -2827,7 +2902,7 @@ func setAttributeViewColWidth(operation *Operation) (err error) {
 func (tx *Transaction) doSetAttrViewColumnWrap(operation *Operation) (ret *TxErr) {
 	err := setAttributeViewColWrap(operation)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
@@ -2871,7 +2946,7 @@ func setAttributeViewColWrap(operation *Operation) (err error) {
 func (tx *Transaction) doSetAttrViewColumnHidden(operation *Operation) (ret *TxErr) {
 	err := setAttributeViewColHidden(operation)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
@@ -2911,7 +2986,7 @@ func setAttributeViewColHidden(operation *Operation) (err error) {
 func (tx *Transaction) doSetAttrViewColumnPin(operation *Operation) (ret *TxErr) {
 	err := setAttributeViewColPin(operation)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
@@ -2946,7 +3021,7 @@ func setAttributeViewColPin(operation *Operation) (err error) {
 func (tx *Transaction) doSetAttrViewColumnIcon(operation *Operation) (ret *TxErr) {
 	err := setAttributeViewColIcon(operation)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
@@ -2971,7 +3046,7 @@ func setAttributeViewColIcon(operation *Operation) (err error) {
 func (tx *Transaction) doSetAttrViewColumnDesc(operation *Operation) (ret *TxErr) {
 	err := setAttributeViewColDesc(operation)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
@@ -2996,7 +3071,7 @@ func setAttributeViewColDesc(operation *Operation) (err error) {
 func (tx *Transaction) doSortAttrViewRow(operation *Operation) (ret *TxErr) {
 	err := sortAttributeViewRow(operation)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
@@ -3048,7 +3123,7 @@ func sortAttributeViewRow(operation *Operation) (err error) {
 func (tx *Transaction) doSortAttrViewColumn(operation *Operation) (ret *TxErr) {
 	err := SortAttributeViewViewKey(operation.AvID, operation.BlockID, operation.ID, operation.PreviousID)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
@@ -3122,7 +3197,7 @@ func SortAttributeViewViewKey(avID, blockID, keyID, previousKeyID string) (err e
 func (tx *Transaction) doSortAttrViewKey(operation *Operation) (ret *TxErr) {
 	err := SortAttributeViewKey(operation.AvID, operation.ID, operation.PreviousID)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
@@ -3201,7 +3276,7 @@ func (tx *Transaction) doAddAttrViewColumn(operation *Operation) (ret *TxErr) {
 	err := AddAttributeViewKey(operation.AvID, operation.ID, operation.Name, operation.Typ, icon, operation.PreviousID)
 
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
@@ -3234,7 +3309,7 @@ func AddAttributeViewKey(avID, keyID, keyName, keyType, keyIcon, previousKeyID s
 			if nil != view.Table {
 				if "" == previousKeyID {
 					if av.LayoutTypeGallery == currentView.LayoutType {
-						// 如果当前视图是画廊视图则添加到最后
+						// 如果当前视图是卡片视图则添加到最后
 						view.Table.Columns = append(view.Table.Columns, &av.ViewTableColumn{BaseField: &av.BaseField{ID: key.ID}})
 					} else {
 						view.Table.Columns = append([]*av.ViewTableColumn{{BaseField: &av.BaseField{ID: key.ID}}}, view.Table.Columns...)
@@ -3281,7 +3356,7 @@ func AddAttributeViewKey(avID, keyID, keyName, keyType, keyIcon, previousKeyID s
 func (tx *Transaction) doUpdateAttrViewColTemplate(operation *Operation) (ret *TxErr) {
 	err := updateAttributeViewColTemplate(operation)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
@@ -3310,7 +3385,7 @@ func updateAttributeViewColTemplate(operation *Operation) (err error) {
 func (tx *Transaction) doUpdateAttrViewColNumberFormat(operation *Operation) (ret *TxErr) {
 	err := updateAttributeViewColNumberFormat(operation)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
@@ -3339,7 +3414,7 @@ func updateAttributeViewColNumberFormat(operation *Operation) (err error) {
 func (tx *Transaction) doUpdateAttrViewColumn(operation *Operation) (ret *TxErr) {
 	err := updateAttributeViewColumn(operation)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
@@ -3376,7 +3451,7 @@ func updateAttributeViewColumn(operation *Operation) (err error) {
 func (tx *Transaction) doRemoveAttrViewColumn(operation *Operation) (ret *TxErr) {
 	err := RemoveAttributeViewKey(operation.AvID, operation.ID, operation.RemoveDest)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
@@ -3496,7 +3571,7 @@ func RemoveAttributeViewKey(avID, keyID string, removeRelationDest bool) (err er
 func (tx *Transaction) doReplaceAttrViewBlock(operation *Operation) (ret *TxErr) {
 	err := replaceAttributeViewBlock(operation, tx)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID}
 	}
 	return
 }
@@ -3602,7 +3677,7 @@ func replaceAttributeViewBlock(operation *Operation, tx *Transaction) (err error
 func (tx *Transaction) doUpdateAttrViewCell(operation *Operation) (ret *TxErr) {
 	err := updateAttributeViewCell(operation, tx)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
@@ -3986,7 +4061,7 @@ func getNodeByBlockID(tx *Transaction, blockID string) (node *ast.Node, tree *pa
 func (tx *Transaction) doUpdateAttrViewColOptions(operation *Operation) (ret *TxErr) {
 	err := updateAttributeViewColumnOptions(operation)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
@@ -4020,7 +4095,7 @@ func updateAttributeViewColumnOptions(operation *Operation) (err error) {
 func (tx *Transaction) doRemoveAttrViewColOption(operation *Operation) (ret *TxErr) {
 	err := removeAttributeViewColumnOption(operation)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
@@ -4072,7 +4147,7 @@ func removeAttributeViewColumnOption(operation *Operation) (err error) {
 func (tx *Transaction) doUpdateAttrViewColOption(operation *Operation) (ret *TxErr) {
 	err := updateAttributeViewColumnOption(operation)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
@@ -4190,7 +4265,7 @@ func updateAttributeViewColumnOption(operation *Operation) (err error) {
 func (tx *Transaction) doSetAttrViewColOptionDesc(operation *Operation) (ret *TxErr) {
 	err := setAttributeViewColumnOptionDesc(operation)
 	if err != nil {
-		return &TxErr{code: TxErrWriteAttributeView, id: operation.AvID, msg: err.Error()}
+		return &TxErr{code: TxErrHandleAttributeView, id: operation.AvID, msg: err.Error()}
 	}
 	return
 }
